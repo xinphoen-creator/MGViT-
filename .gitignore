@@ -1,0 +1,29 @@
+# 模型权重和检查点 (极其重要，防止几个G的文件入库)
+*.pth
+*.pt
+*.onnx
+checkpoints/
+outputs/
+runs/
+logs/
+
+# 数据集和大型压缩包
+data/
+dataset/
+*.zip
+*.tar.gz
+*.h5
+*.csv
+
+# Python 缓存和日志
+__pycache__/
+*.py[cod]
+*.pyc
+*.log
+.ipynb_checkpoints/
+
+# 系统和IDE配置文件
+.DS_Store
+.vscode/
+.idea/
+.trae/
