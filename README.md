@@ -245,6 +245,28 @@ python examples/anomalyncd_main.py \
 | 推理模式 | 支持 `--only_test` 独立推理 |
 | 可复现性 | 固定全局种子 |
 
+### 6.4 推理性能
+
+| 指标 | 值 |
+|------|-----|
+| 设备 | NVIDIA GPU (cuda:0) |
+| 平均推理耗时 | 100.0 ms/张 |
+| 等效 FPS | 10.0 |
+| 输入尺寸 | 224×224 |
+| 类别数 | 8（4 已知缺陷 + 4 未知/正常） |
+
+> 测试条件：单张 900×900 原图 → resize+crop 至 224×224 → GPU 推理 100 次取平均
+> 测试脚本：`benchmark.py`
+
+### 6.5 ONNX 导出（可选加速）
+
+```bash
+python export_onnx.py    # 导出 mgvit_bottle.onnx (327.5MB)
+python benchmark_onnx.py # 对比测试
+```
+
+> ⚠️ ONNX GPU 推理需要 cuDNN 9.x + CUDA 12.x。当前集群为 cuDNN 8.x，ONNX 回退 CPU（450ms），不如 PyTorch 原生 GPU（100ms）。部署到正确环境后可启用。
+
 ---
 
 ## 7. 常见报错怎么解决
