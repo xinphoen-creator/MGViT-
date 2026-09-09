@@ -1,7 +1,28 @@
 # AnomalyNCD — 工业场景新异常类别发现
 
+**Industrial Anomaly NCD with Soft Modulation**
+
+This repository implements our research work based on AnomalyNCD (CVPR 2025).
+
+- **Base paper**: Huang et al., *AnomalyNCD: Towards Novel Anomaly Class Discovery in Industrial Scenarios*, CVPR 2025.
+- **Our work**: Soft Modulation and Adaptive Temperature Gating for Novel Class Discovery in Industrial Anomaly Detection (Manuscript in Preparation).
+
+**Baseline** (from AnomalyNCD):
+- MEBin / MGViT / PLC / Region Merge
+
+**Our Improvements**:
+- A1-CLS-lite（即 Soft Modulation）/ Adaptive Temperature Gating
+
 > 论文：AnomalyNCD: Towards Novel Anomaly Class Discovery in Industrial Scenarios (CVPR 2025)
 > 项目类型：论文型（兼顾少量工程适配）
+
+> **关于代码范围**
+>
+> 本仓库包含工程化部分：容器化（Dockerfile）、推理服务（FastAPI，`api.py`）、
+> 性能基准（`benchmark.py`）、ONNX 导出与对比（`export_onnx.py` / `benchmark_onnx.py`）
+> 及完整复现文档。
+> 核心模型代码基于 AnomalyNCD 官方实现修改，因授权原因暂未公开。
+> 训练与推理需配合 AnomalyNCD 原始代码库使用。
 
 ---
 
@@ -65,7 +86,7 @@ pip install -r requirements.txt
 | 数据集 | 用途 | 获取方式 |
 |--------|------|----------|
 | **MVTec AD** | 主力评估数据集，15 个产品类别 | [官网](https://www.mvtec.com/company/research/datasets/mvtec-ad) 下载 |
-| **MTD**（Magnetic Tile Defect） | 磁瓦缺陷数据集，6 个缺陷类别 | [GitHub](https://github.com/abin24/Magnetic-tile-defect-datasets.) 下载 |
+| **MTD**（Magnetic Tile Defect） | 磁瓦缺陷数据集，6 个缺陷类别 | [GitHub](https://github.com/abin24/Magnetic-tile-defect-datasets) 下载 |
 | **AeBAD** | 已标注基类数据（4 个类别：breakdown, ablation, fracture, groove） | 见论文 *Industrial anomaly detection with domain shift* (Computers in Industry, 2023)，需联系原作者获取|
 
 ### 3.2 异常分数图
@@ -234,7 +255,21 @@ python examples/anomalyncd_main.py \
 | MVTec AD | CPR + AnomalyNCD | **0.736** | **0.674** | **0.805** | **0.964** |
 | MTD | PatchCore + AnomalyNCD | 0.421 | 0.390 | 0.617 | 0.741 (PatchCore) |
 
-### 6.3 工程指标
+> **注**：本仓库复现 baseline 为 10-seed 均值 Micro F1=0.7187，与论文报告的 0.712 存在差异，源于随机种子与运行环境不同，不构成矛盾。
+
+### 6.3 复现与改进结果
+
+在 MVTec AD 上以 10 个随机种子复现 baseline 并验证改进：
+
+| 方法 | Micro F1 | 提升 |
+|------|----------|------|
+| Baseline（10-seed 均值） | 0.7187 | — |
+| + Soft Modulation（即 A1-CLS-lite）+ Adaptive Temperature Gating | **0.7352** | +2.30% |
+
+- 统计显著性：Wilcoxon signed-rank 检验（同 seed 配对），p = 0.002
+- 附加成本：仅新增 3 个可学习标量参数
+
+### 6.4 工程指标
 
 | 指标 | 值 |
 |------|-----|
@@ -245,7 +280,7 @@ python examples/anomalyncd_main.py \
 | 推理模式 | 支持 `--only_test` 独立推理 |
 | 可复现性 | 固定全局种子 |
 
-### 6.4 推理性能
+### 6.5 推理性能
 
 | 指标 | 值 |
 |------|-----|
@@ -258,7 +293,7 @@ python examples/anomalyncd_main.py \
 > 测试条件：单张 900×900 原图 → resize+crop 至 224×224 → GPU 推理 100 次取平均
 > 测试脚本：`benchmark.py`
 
-### 6.5 ONNX 导出（可选加速）
+### 6.6 ONNX 导出（可选加速）
 
 ```bash
 python export_onnx.py    # 导出 mgvit_bottle.onnx (327.5MB)
@@ -344,18 +379,24 @@ cv2.error: ... is not a valid numeric value
 
 ```
 AnomalyNCD-Project/
-├── README.md               # 本文档
-├── PROJECT_DEFINE.md       # 项目定义文档
-├── requirements.txt        # Python 依赖
-├── configs/                # 训练配置文件
-├── models/                 # 模型代码
-├── datasets/               # 数据处理
-├── utils/                  # 工具函数
-├── examples/               # 训练/推理入口
-├── train.py                # 训练入口（待实现）
-├── inference.py            # 推理入口（待实现）
-└── api.py                  # API 服务（待实现）
+├── README.md                 # 本文档
+├── PROJECT_DEFINE.md         # 项目定义文档
+├── requirements.txt          # 精简依赖（12 个核心包，用于推理/部署）
+├── requirements_full.txt     # 完整依赖（含 anomalib、faiss 等，用于训练）
+├── Dockerfile                # 容器化部署
+├── api.py                    # FastAPI 推理服务（/predict + /health）
+├── inference.py              # 命令行推理脚本
+├── train.py                  # 训练入口（封装 anomalyncd_main.py）
+├── benchmark.py              # PyTorch GPU 推理性能测试
+├── benchmark_onnx.py         # ONNX 推理性能对比测试
+├── export_onnx.py            # ONNX 模型导出
+├── shared_utils/             # 推理公共模块
+│   ├── __init__.py
+│   └── inference_utils.py    # 模型加载、prototype 计算、单张推理（api.py 和 inference.py 共用）
+└── .gitignore                # 排除权重、数据集、缓存
 ```
+
+> **注意**：核心模型代码（`models/`、`datasets/`、`utils/`、`configs/`、`examples/`）在外部仓库中。本仓库的 `train.py` 和 `inference.py` 通过 `sys.path` 引用该外部仓库。
 
 ---
 
